@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Найдите проблему в требованиях к журналированию</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#7C6FF5; --accent-hover:#6658E0; --accent-light:#F1EEFE; --accent-light-border:#DCD5FC;
+    --ink:#1F2430; --ink-soft:#4B5160; --gray:#6B7280; --border:#E6E7EC;
+    --good:#2F9E5C; --good-bg:#EAF8F0; --good-border:#BEE9D0;
+    --bad-bg:#FDEEEE; --bad-border:#F5C9C7; --bad-text:#C13A34;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#fff; color:var(--ink); line-height:1.5; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:760px; margin:0 auto; padding:36px 24px 60px;}
+  .tag-row{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+  .tag{font-size:12.5px; font-weight:600; padding:5px 12px; border-radius:999px; background:var(--accent-light); color:var(--accent-hover); border:1px solid var(--accent-light-border);}
+  .tag.muted{background:#F5F5F7; color:var(--gray); border-color:#E6E7EC;}
+  h1{font-size:26px; font-weight:800; margin:0 0 10px; letter-spacing:-0.01em;}
+  .lead{color:var(--ink-soft); font-size:15px; margin:0 0 26px; max-width:620px;}
+  .doc-card{border:1px solid var(--border); border-radius:14px; box-shadow:0 1px 2px rgba(20,20,43,0.04), 0 8px 24px rgba(20,20,43,0.05); overflow:hidden; background:#fff;}
+  .doc-header{background:#FAFAFC; border-bottom:1px solid var(--border); padding:14px 22px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--gray); display:flex; justify-content:space-between;}
+  .doc-body{padding:22px;}
+  .doc-title{font-size:14px; font-weight:700; color:var(--ink); margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid var(--border);}
+  .req-block{display:flex; gap:14px; padding:14px 12px; border-radius:10px; border:1.5px solid transparent; cursor:pointer; transition:border-color .15s ease, background .15s ease; margin-bottom:4px;}
+  .req-block:hover:not(.locked){border-color:var(--accent-light-border); background:var(--accent-light);}
+  .req-id{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--gray); flex-shrink:0; width:70px; padding-top:2px;}
+  .req-text{font-size:14.5px; color:var(--ink);}
+  .req-block.correct{border-color:var(--good-border); background:var(--good-bg);}
+  .req-block.correct .req-id{color:var(--good);}
+  .req-block.wrong-flash{border-color:var(--bad-border); background:var(--bad-bg);}
+  .inline-hint{font-size:13px; color:var(--bad-text); margin-top:4px; display:none;}
+  .req-block.wrong-flash .inline-hint{display:block;}
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-top:18px;}
+  .attempts{font-size:13px; color:var(--gray);}
+  .btn{background:none; border:1.5px solid var(--accent-light-border); color:var(--accent-hover); font-family:inherit; font-weight:600; font-size:13.5px; padding:9px 16px; border-radius:8px; cursor:pointer; transition:background .15s ease;}
+  .btn:hover{background:var(--accent-light);}
+  .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .btn.primary:hover{background:var(--accent-hover);}
+  .reveal{display:none; margin-top:24px; animation:fadein .3s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  .reveal-card{border:1px solid var(--good-border); background:var(--good-bg); border-radius:14px; padding:22px 24px;}
+  .reveal-label{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; color:var(--good); margin-bottom:10px;}
+  .reveal-text{font-size:14.5px; color:var(--ink); margin:0 0 16px;}
+  .fix-box{background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px 16px; font-size:14px; margin-bottom:10px;}
+  .fix-box .label{font-size:12px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:0.02em; margin-bottom:6px;}
+  .fix-box.was{border-left:3px solid var(--bad-text);}
+  .fix-box.now{border-left:3px solid var(--good);}
+  .lesson-ref{font-size:13px; color:var(--ink-soft); margin-top:14px;}
+  .footer-btn{margin-top:22px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tag-row">
+    <span class="tag">SA-I-008 · Безопасность информации</span>
+    <span class="tag muted">Карточка 8 из 10</span>
+  </div>
+  <h1>Найдите проблему в требованиях к журналированию</h1>
+  <p class="lead">
+    Ниже — фрагмент SRS по безопасности FoodMart, раздел про журналирование (логи).
+    Все четыре требования выглядят как обычная забота о диагностике и аудите.
+    Но одно из них разработчик реализует буквально — и это станет утечкой данных
+    уже на первом боевом платеже. Кликните на требование, которое вызывает вопросы.
+  </p>
+
+  <div class="doc-card">
+    <div class="doc-header">
+      <span>SRS_FoodMart_Security_v1.0.docx</span>
+      <span>раздел 3.6 · Журналирование</span>
+    </div>
+    <div class="doc-body">
+      <p class="doc-title">3.6 Журналирование</p>
+
+      <div class="req-block" data-correct="false" onclick="handleClick(this)">
+        <span class="req-id">REQ-061</span>
+        <div>
+          <div class="req-text">Система должна логировать время и результат каждой попытки оплаты (успех/ошибка) для последующего анализа инцидентов.</div>
+          <div class="inline-hint">Это требование безопасно — фиксируется только факт и результат оплаты, без данных карты. Попробуйте ещё раз.</div>
+        </div>
+      </div>
+
+      <div class="req-block" data-correct="false" onclick="handleClick(this)">
+        <span class="req-id">REQ-062</span>
+        <div>
+          <div class="req-text">Система должна логировать email клиента при оформлении заказа, чтобы служба поддержки могла быстро найти обращение по логам.</div>
+          <div class="inline-hint">Email — минимально чувствительные данные, и такая практика распространена при ограниченном доступе к логам. Проблема не здесь. Попробуйте ещё раз.</div>
+        </div>
+      </div>
+
+      <div class="req-block" data-correct="true" onclick="handleClick(this)">
+        <span class="req-id">REQ-063</span>
+        <div>
+          <div class="req-text">Для отладки интеграции с платёжным шлюзом система должна логировать полное тело запроса и ответа к платёжному шлюзу.</div>
+        </div>
+      </div>
+
+      <div class="req-block" data-correct="false" onclick="handleClick(this)">
+        <span class="req-id">REQ-064</span>
+        <div>
+          <div class="req-text">Журналы доступа к административной панели должны храниться не менее 180 дней.</div>
+          <div class="inline-hint">Требование про срок хранения логов корректно и не создаёт риска само по себе. Попробуйте ещё раз.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <span class="attempts" id="attempts-label">Попыток: 0</span>
+    <button class="btn" onclick="giveUp()">Показать разбор</button>
+  </div>
+
+  <div class="reveal" id="reveal">
+    <div class="reveal-card">
+      <div class="reveal-label">✓ Проблема найдена — REQ-063</div>
+      <p class="reveal-text">
+        «Полное тело запроса и ответа» к платёжному шлюзу почти всегда содержит номер
+        карты, CVV, токены авторизации или другие чувствительные платёжные данные —
+        в зависимости от протокола шлюза. Разработчик реализует требование буквально:
+        включит подробное логирование на уровне HTTP-клиента, и эти данные окажутся
+        в текстовых логах, куда обычно имеет доступ гораздо больше людей, чем к
+        платёжной системе. Для PCI DSS это прямое нарушение требований к хранению
+        платёжных данных.
+      </p>
+      <div class="fix-box was">
+        <div class="label">Было</div>
+        Логировать полное тело запроса и ответа к платёжному шлюзу — без исключений.
+      </div>
+      <div class="fix-box now">
+        <div class="label">Как поправить</div>
+        Логировать только нечувствительные поля: ID транзакции, статус, временную
+        метку, код ошибки шлюза. Явно перечислить поля, которые логировать запрещено
+        (номер карты, CVV, токены), и замаскировать их при необходимости отладки.
+      </div>
+      <p class="lesson-ref">
+        Разбирается в модуле SA-I-008 (безопасность информации), в части настройки
+        журналирования. Обратите внимание на REQ-062 — требование про email клиента
+        выглядит похоже по формулировке («логировать для службы поддержки»), но не
+        является проблемой: важно различать минимально чувствительные данные и
+        данные, прямо подпадающие под защиту платёжных систем.
+      </p>
+      <div class="footer-btn">
+        <button class="btn primary" onclick="location.reload()">Попробовать ещё раз</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let attempts = 0;
+let solved = false;
+
+function handleClick(el){
+  if(solved) return;
+  attempts++;
+  document.getElementById('attempts-label').textContent = `Попыток: ${attempts}`;
+  document.querySelectorAll('.req-block').forEach(b => b.classList.remove('wrong-flash'));
+
+  if(el.dataset.correct === 'true'){
+    solved = true;
+    el.classList.add('correct');
+    document.querySelectorAll('.req-block').forEach(b => { b.style.cursor='default'; b.classList.add('locked'); });
+    document.getElementById('reveal').style.display = 'block';
+    document.getElementById('reveal').scrollIntoView({behavior:'smooth', block:'nearest'});
+  } else {
+    el.classList.add('wrong-flash');
+  }
+}
+
+function giveUp(){
+  if(solved) return;
+  solved = true;
+  document.querySelectorAll('.req-block').forEach(b => {
+    b.classList.remove('wrong-flash');
+    if(b.dataset.correct === 'true') b.classList.add('correct');
+  });
+  document.getElementById('reveal').style.display = 'block';
+  document.getElementById('reveal').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+</script>
+</body>
+</html>
